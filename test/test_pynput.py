@@ -107,17 +107,17 @@ def env_make():
         target_quantities = 1,
         reward_weights = 1,
         initial_inventory = [],
-        fast_reset_random_teleport_range = 100,
+        # fast_reset_random_teleport_range = 100,
         # start_at_night = True,
-        no_daylight_cycle = True,
+        # no_daylight_cycle = True,
         specified_biome = "plains",
         # generate_world_type = "flat",
-        max_nsteps = 1000,
-        need_all_success = False,
+        # max_nsteps = 1000,
+        # need_all_success = False,
         voxel_size = dict(xmin=-1,ymin=0,zmin=1,xmax=1,ymax=1,zmax=2),
         use_voxel = True,
-        custom_commands = ["/give @p minecraft:diamond_axe 1 0"],
-        force_slow_reset_interval = 2,
+        # custom_commands = ["/give @p minecraft:diamond_axe 1 0"],
+        # force_slow_reset_interval = 2,
         world_seed=0,  # 123
         seed=42,
     )
@@ -125,8 +125,7 @@ def env_make():
 
 def test_pynput_in_minedojo():
     # test_pynput()
-    listener = KeyMouseListener()
-    listener.start()
+    
     # env = minedojo.make(
     #     task_id="harvest_milk",  # creative:255
     #     image_size=(260, 380),
@@ -136,6 +135,10 @@ def test_pynput_in_minedojo():
     env = env_make()
     obs = env.reset()
     print('Action no op: ', env.action_space.no_op())
+    view_mid = env.action_space.no_op()[3]
+    listener = KeyMouseListener(view_mid)
+    listener.start()
+
     while True:
         act = env.action_space.no_op()
         for i, a in enumerate(listener.get_action()):
@@ -144,7 +147,8 @@ def test_pynput_in_minedojo():
         # print_action_mask(obs)
         # print_equipment(obs)
         # break
-        time.sleep(0.1)
+        # env.render()
+        time.sleep(0.05)
         if done:
             break
     env.close()

@@ -1,12 +1,31 @@
 
 from pynput import keyboard, mouse
-from pynput.mouse import Button, Controller
-import minedojo
+
+
+action_key_mapping = {
+    'forward': ['w', 0, 1], 
+    'backward': ['s', 0, 2], 
+
+    'left': ['a', 1, 1], 
+    'right': ['d', 1, 2], 
+    
+    'jump': [keyboard.Key.space, 2, 1], 
+    'sneak': [keyboard.Key.shift, 2, 2], 
+    'sprint': ['r', 2, 3],
+
+    'use': ['u', 5, 1],
+    'drop': ['o', 5, 2],
+    # attack mouse left 
+    'craft': ['c', 5, 4], 
+    'equip': ['e', 5, 5], 
+    'place': ['p', 5, 6], 
+    'destroy': ['x', 5, 7], 
+}
 
 
 class KeyMouseListener:
 
-    def __init__(self) -> None:
+    def __init__(self, view_mid) -> None:
         # ...or, in a non-blocking fashion:
         '''Hint:
             act[0]=1/2, forward/backward
@@ -16,14 +35,49 @@ class KeyMouseListener:
             act[4]=0-24, yaw, horizontal
             act[5]=1/2/3/4/5/6/7, use/drop/attack/craft/equip/place/destroy'''
         self._mouse_position_ = [0, 0]
-        self.__valve__ = 1  # position addition threshold
-        self._h_max_, self._h_min_, self._v_max_, self._v_min_ = 10, 0, 10, 0
-        self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0]
+        self.__valve__ = 0  # position addition threshold
+        self._h_max_, self._h_min_, self._v_max_, self._v_min_ = view_mid * 2, 0, view_mid * 2, 0
+        self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0, 0, 0]
+        self._mouse_left_on_ = False
+        self._mouse_right_on_ = False
+        self.craft = 0
+        self.epd = 0
+        self._action_switch_ = [
+            [False, False],  # forward, backward
+            [False, False],  # left, right
+            [False, False, False],  # jump, sneak, sprint
+            [],
+            [],
+            # use,  drop,  attack, craft, equip, place, destroy
+            [False, False, False, False, False, False, False]]
 
     def get_action(self):
         ''' after each read, reset action 2 no-opt '''
+        for i, switch in enumerate(self._action_switch_):
+            if i in [3, 4]:  # escape view action
+                continue
+            val = 0
+            for j, tf in enumerate(switch):
+                if tf:  # the first action in each action
+                    val = j + 1
+                    break
+            self._action_[i] = val
+        # attack has high priority
+        self._action_[5] = 3 if self._mouse_left_on_ else self._action_[5]
+        # craft, and equip, place, destroy para settings
+        if self._action_[5] == 4:  # craft
+            self._action_[6] = self.craft
+            print('craft on para: {}'.format(self._action_[6]))
+            self.craft = 0
+        if self._action_[5] in [5, 6, 7]:  # equip, place, destroy
+            self._action_[7] = self.epd
+            print('equip, place, destroy(5, 6, 7): {} on para: {}'.format(
+                self._action_[5], self._action_[7]))
+            self.epd = 0
+            print('cur action: ', self._action_)
         act = self._action_
-        self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0]
+
+        self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0, 0, 0]  # no op
         # if self._action_ != act:
         #     print('Action: {}'.format(act))
         return act
@@ -42,52 +96,43 @@ class KeyMouseListener:
     def on_move(self, x, y):
         # if self._mouse_position_ == [0, 0]:
         #     self._mouse_position_ = [y, x]
-        if x > self._mouse_position_[0] + self.__valve__ and self._action_[4] < self._h_max_:
-            self._action_[4] += 1
-        if x < self._mouse_position_[0] - self.__valve__ and self._action_[4] > self._h_min_:
-            self._action_[4] -= 1
-        if y > self._mouse_position_[1] + self.__valve__ and self._action_[3] < self._v_max_:
-            self._action_[3] += 1
-        if y < self._mouse_position_[1] - self.__valve__ and self._action_[3] > self._v_min_:
-            self._action_[3] -= 1
+        if self._mouse_right_on_:
+            if x > self._mouse_position_[0] + self.__valve__ and self._action_[4] < self._h_max_:
+                self._action_[4] += 1
+            if x < self._mouse_position_[0] - self.__valve__ and self._action_[4] > self._h_min_:
+                self._action_[4] -= 1
+            if y > self._mouse_position_[1] + self.__valve__ and self._action_[3] < self._v_max_:
+                self._action_[3] += 1
+            if y < self._mouse_position_[1] - self.__valve__ and self._action_[3] > self._v_min_:
+                self._action_[3] -= 1
         # update _mouse_position_
         self._mouse_position_ = [x, y]
-        # print('Pointer moved to {0}'.format(
-        #     (x, y)))
         
     def on_click(self, x, y, button, pressed):
-        # if pressed:
-        # 3: attack, 4: craft
-        self._action_[5] = 3 if button == mouse.Button.left else 4
+        if button == mouse.Button.left:
+            self._mouse_left_on_ = pressed
+        else:
+            self._mouse_right_on_ = pressed
 
     # keyboard
     def on_press(self, key):
         try:
-            if key.char == 'r':  # use
-                self._action_[5] = 1
-            if key.char == 't':  # drop
-                self._action_[5] = 2
-            if key.char == 'e':  # equip
-                self._action_[5] = 5
-            if key.char == 'z':  # place
-                self._action_[5] = 6
-            if key.char == 'x':  # destroy
-                self._action_[5] = 7
-            if key.char == 'v':  # sprint
-                self._action_[2] = 3
-            if key.char == 'w':  # forward
-                self._action_[0] = 1
-            if key.char == 's':  # backward
-                self._action_[0] = 2
-            if key.char == 'a':  # left
-                self._action_[1] = 1
-            if key.char == 'd':  # right
-                self._action_[1] = 2
+            for k, val in action_key_mapping.items():
+                if key.char == val[0]:
+                    self._action_switch_[ val[1] ][ val[2] - 1 ] = True
+                    print('{}: {} pressed'.format(k, val))
+            if key.char in [str(i) for i in range(10)]:
+                if self._mouse_right_on_:  # craft para
+                    self.craft = int(key.char)
+                    print('craft para: {}'.format(self.craft))
+                else:
+                    self.epd = int(key.char)
+                    print('equip-place-destroy para: {}'.format(self.epd))
         except AttributeError:
-            if key == keyboard.Key.shift:
-                self._action_[2] = 2  # sneak
-            if key == keyboard.Key.space:  # jump
-                self._action_[2] = 1
+            for k, val in action_key_mapping.items():
+                if key == val[0]:
+                    self._action_switch_[ val[1] ][ val[2] - 1] = True
+                    print('{}: {} pressed'.format(k, val))
 
     def on_release(self, key):
         # print('{0} released'.format(
@@ -95,4 +140,16 @@ class KeyMouseListener:
         if key == keyboard.Key.esc:
             # Stop listener
             return False
+        
+        try:
+            for k, val in action_key_mapping.items():
+                if key.char == val[0]:
+                    self._action_switch_[ val[1] ][ val[2] - 1] = False
+                    print('{}: {} released'.format(k, val))
+
+        except AttributeError:
+            for k, val in action_key_mapping.items():
+                if key == val[0]:
+                    self._action_switch_[ val[1] ][ val[2] - 1 ] = False
+                    print('{}: {} released'.format(k, val))
         
