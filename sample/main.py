@@ -1,73 +1,116 @@
 import minedojo
+import time
+import random
+import pickle
+import lmdb
+import numpy as np
+import os
+
+from sample.key_mouse import KeyMouseListener
+from sample.utils import VideoHolder, ImageHolder
+
+
+RAND_CHARACTER_RAW = 'zyxwvutsrqponmlkjihgfedcba0123456789'
+RAND_LEN = 10
+
+
+def print_action_mask(obs):
+    # all type is array bool
+    # print('# action type # ', obs["masks"]["action_type"])   # shape: [8]
+    # print('# action arg # ', obs["masks"]["action_arg"])   # shape: [8]
+    # print('# place # ', obs["masks"]["place"])   # shape: [36]
+    # print('# equip # ', obs["masks"]["equip"])   # shape: [36]
+    # print('# destroy # ', obs["masks"]["destroy"])   # shape: [36]
+    # print('# craft # ', obs["masks"]["craft_smelt"])  # shape: [244] type: bool
+    # print('# masks # ', obs["masks"])
+    craft_available = []
+    for i, item in enumerate(obs["masks"]["craft_smelt"]):
+        if item:
+            craft_available.append(i)
+    print('Craft available:', craft_available)
+
+
+class CraftSampler:
+
+    def __init__(self, data_dir='./output', image_h_w=(260, 380), goal='log', horizon=200) -> None:
+        self.name = ''.join(random.sample(RAND_CHARACTER_RAW, RAND_LEN))
+        self.env = lmdb.open(os.path.join(data_dir, 'lmdb-test'))
+        
+        self.imholder = ImageHolder()
+        self.holder = VideoHolder(os.path.join(data_dir, 'video-sample', 
+                                               self.name + '.mp4'))
+        self.holder.init_write_frame(*image_h_w)
+        self.goal, self.horizon = goal, horizon
+        self.traj_meta = {'voxels': [], 'compass': [], 'gps': [], 'action': [],
+                          'biome': [], 'goal': [self.goal]}
+        pass
+
+    def sample(self, obs, action):
+        # change in traj
+        self.traj_meta['voxels'].append(obs["voxels"]["block_meta"])  # (3, 3, 3) np.int64
+        self.traj_meta['compass'].append(np.concatenate([obs["location_stats"]["pitch"], 
+                                                         obs["location_stats"]["yaw"]]))
+        self.traj_meta['gps'].append(obs["location_stats"]["pos"])  # (3,) float
+        self.traj_meta['action'].append(np.array(action))
+        # unchange in traj
+        self.traj_meta['biome'].append(obs["location_stats"]["biome_id"])  # (1, ) long
+        # step and prev_action is implicit in previous info
+
+        self.holder.write_frame(self.imholder.chw2hwc(obs['rgb'])[...,::-1])
+
+    def save_data(self):
+        for name in ['voxels', 'compass', 'gps', 'action']:
+            self.traj_meta[name] = np.stack(self.traj_meta[name])
+        for name in ['biome', 'goal']:
+            self.traj_meta[name] = np.array(self.traj_meta[name])
+        self.traj_meta['horizon'] = np.array([len(self.traj_meta['action'])])
+        
+        traj_meta_bytes = pickle.dumps(self.traj_meta)
+        txn = self.env.begin(write=True)
+        txn.put(self.name.encode(), traj_meta_bytes)
+        txn.commit()  # commit transaction
+        print('Traj saved, name: {}, total: {}'.format(self.name, 
+                                                       len(self.traj_meta['goal'])))
+
+    def close_lmdb(self):
+        self.env.close()
 
 
 def task_havest_sheep():
+    image_size = (480, 640)
     env = minedojo.make(
-        # task_id="harvest_wool_with_shears_and_sheep",
-        task_id="combat_spider_plains_leather_armors_diamond_sword_shield",
-        image_size=(512, 512),
-        world_seed=123,
-        seed=42,
+        task_id="harvest",  # _wool_with_shears_and_sheep
+        image_size=image_size,
+        use_voxel = True,
+        world_seed=9,
+        seed=7,
     )
     obs = env.reset()
-    steps, val = 0, [1, 0, 0, 0, 12, 12, 0]
-    input('Start:')
-    for i in range(200):
-        act = env.action_space.no_op()
-        if steps <= 0:
-            mind = '''Hint:
-                act[0]=1/2, forward/backward
-                act[1]=1/2, move left/right
-                act[2]=1/2/3, jump/sneak/sprint
-                act[3]=0-24, pitch, vertical
-                act[4]=0-24, yaw, horizontal
-                act[5]=1/2/3/4/5/6/7, use/drop/attack/craft/equip/place/destroy'''
-            x = input(mind + '\nInput steps and actions: ')
-            val = [int(item) for item in x.strip().split(' ')]
-            if len(val) == 7:
-                steps = val[0]
-            else:
-                val = [1, 0, 0, 0, 12, 12, 0]
+    # get view mid, since it differs in different settings
+    view_mid = env.action_space.no_op()[3]
+    listener = KeyMouseListener(view_mid)
+    listener.start()
 
-        act[0], act[1], act[2], act[3], act[4], act[5] = val[1], val[2], val[3], val[4], val[5], val[6]
-        
-        obs, reward, done, info = env.step(act)
-        # if i % 20 == 0:
-        print('reward: {}'.format(reward))
-        print('life status: {}'.format(obs["life_stats"]["life"]))
-        print('nearby: {}'.format(obs["nearby_tools"]))
-        # if i == 1:
-        #     img_data = obs['rgb'].copy()
-        #     print(type(img_data), img_data.shape)
-        #     # print(img_data)
-        #     img_data = torch.tensor(img_data, dtype=torch.uint8)
-        #     img_data = img_data.permute(1, 2, 0).contiguous()
-        #     cv2.imwrite('./output/temp01.jpg', img_data.numpy())
-        steps -= 1
+    goal, horizon = 'log', 200
+    sampler = CraftSampler('./output', image_h_w=image_size, goal=goal,
+                           horizon=horizon)
+
+    for i in range(horizon):
+        action = listener.get_action()
+        obs, reward, done, info = env.step(action)
+        control = listener.get_control()
+
+        # sample data
+        sampler.sample(obs, action)
+
+        if control == 'exit':
+            break
+        elif control == 'masks':
+            print_action_mask(obs)
+        elif control != None:
+            print(obs[control])
+        time.sleep(0.15)  # 20fps
     env.close()
 
-
-def test_action_mask():
-    env = minedojo.make(
-        task_id="harvest_milk",  # creative:255
-        image_size=(260, 380),
-        world_seed=123,
-        seed=42,
-    )
-    obs = env.reset()
-    for i in range(200):
-        act = env.action_space.no_op()
-        obs, reward, done, info = env.step(act)
-        '''0: noop, 1: use, 2: drop, 3: attack, 4: craft, 5: equip, 6: place, 7: destroy'''
-        print(obs['masks']['action_type'])
-        print(obs['masks']['action_arg']) # shape=[8 x 1], type=bool
-        print(obs['masks']['equip'])
-        print(obs["masks"]["destroy"])
-        print(obs["masks"]["craft_smelt"])
-        break
-    env.close()
-
-
-if __name__ == '__main__':
-    # task_havest_sheep()
-    test_action_mask()
+    sampler.save_data()
+    sampler.close_lmdb()

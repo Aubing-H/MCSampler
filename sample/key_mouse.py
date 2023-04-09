@@ -1,7 +1,7 @@
 
 from pynput import keyboard, mouse
 
-
+# action mapping: action_name: [key, action_index, action_value]
 action_key_mapping = {
     'forward': ['w', 0, 1], 
     'backward': ['s', 0, 2], 
@@ -22,6 +22,21 @@ action_key_mapping = {
     'destroy': ['x', 5, 7], 
 }
 
+# print infomation during playing
+control_keys = {
+    'rgb': 'g',
+    'voxels': 'v', 
+    'equipment': 'q',
+    'inventory': 'i',
+    'location_stats': 'm',
+    # 'rays': 'y',
+    'masks': 'k',
+
+    'exit': keyboard.Key.esc, 
+}
+
+'''not used: b, f, h, j, l, n, t, z '''
+
 
 class KeyMouseListener:
 
@@ -40,8 +55,7 @@ class KeyMouseListener:
         self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0, 0, 0]
         self._mouse_left_on_ = False
         self._mouse_right_on_ = False
-        self.craft = 0
-        self.epd = 0
+        self._craft_, self._epd_ = 0, 0
         self._action_switch_ = [
             [False, False],  # forward, backward
             [False, False],  # left, right
@@ -50,6 +64,13 @@ class KeyMouseListener:
             [],
             # use,  drop,  attack, craft, equip, place, destroy
             [False, False, False, False, False, False, False]]
+        
+        self._control_ = None
+
+    def get_control(self):
+        control = self._control_
+        self._control_ = None
+        return control
 
     def get_action(self):
         ''' after each read, reset action 2 no-opt '''
@@ -66,15 +87,15 @@ class KeyMouseListener:
         self._action_[5] = 3 if self._mouse_left_on_ else self._action_[5]
         # craft, and equip, place, destroy para settings
         if self._action_[5] == 4:  # craft
-            self._action_[6] = self.craft
+            self._action_[6] = self._craft_
             print('craft on para: {}'.format(self._action_[6]))
-            self.craft = 0
+            self._craft_ = 0
         if self._action_[5] in [5, 6, 7]:  # equip, place, destroy
-            self._action_[7] = self.epd
+            self._action_[7] = self._epd_
             print('equip, place, destroy(5, 6, 7): {} on para: {}'.format(
                 self._action_[5], self._action_[7]))
-            self.epd = 0
-            print('cur action: ', self._action_)
+            self._epd_ = 0
+            # print('cur action: ', self._action_)
         act = self._action_
 
         self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0, 0, 0]  # no op
@@ -120,19 +141,31 @@ class KeyMouseListener:
             for k, val in action_key_mapping.items():
                 if key.char == val[0]:
                     self._action_switch_[ val[1] ][ val[2] - 1 ] = True
-                    print('{}: {} pressed'.format(k, val))
+                    # print('{}: {} pressed'.format(k, val))
             if key.char in [str(i) for i in range(10)]:
                 if self._mouse_right_on_:  # craft para
-                    self.craft = int(key.char)
-                    print('craft para: {}'.format(self.craft))
+                    if key.char == '0':
+                        self._craft_ += 10
+                    else:
+                        self._craft_ += int(key.char)
+                    print('craft para: {}'.format(self._craft_))
                 else:
-                    self.epd = int(key.char)
-                    print('equip-place-destroy para: {}'.format(self.epd))
+                    if key.char == '0':
+                        self._epd_ += 10
+                    else:
+                        self._epd_ += int(key.char)
+                    print('equip-place-destroy para: {}'.format(self._epd_))
+            for k, val in control_keys.items():
+                if key.char == val:
+                    self._control_ = k
         except AttributeError:
             for k, val in action_key_mapping.items():
                 if key == val[0]:
                     self._action_switch_[ val[1] ][ val[2] - 1] = True
-                    print('{}: {} pressed'.format(k, val))
+                    # print('{}: {} pressed'.format(k, val))
+            for k, val in control_keys.items():
+                if key == val:
+                    self._control_ = k
 
     def on_release(self, key):
         # print('{0} released'.format(
@@ -145,11 +178,11 @@ class KeyMouseListener:
             for k, val in action_key_mapping.items():
                 if key.char == val[0]:
                     self._action_switch_[ val[1] ][ val[2] - 1] = False
-                    print('{}: {} released'.format(k, val))
+                    # print('{}: {} released'.format(k, val))
 
         except AttributeError:
             for k, val in action_key_mapping.items():
                 if key == val[0]:
                     self._action_switch_[ val[1] ][ val[2] - 1 ] = False
-                    print('{}: {} released'.format(k, val))
+                    # print('{}: {} released'.format(k, val))
         

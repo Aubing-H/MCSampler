@@ -2,6 +2,7 @@
 from pynput import keyboard, mouse
 from pynput.mouse import Button, Controller
 import minedojo
+import numpy as np
 
 from sample.key_mouse import KeyMouseListener
 import time
@@ -74,17 +75,6 @@ def test_pynput():
         listener_mouse.start()
 
 
-def print_action_mask(obs):
-    # all type is array bool
-    print('# action type # ', obs["masks"]["action_type"])   # shape: [8]
-    print('# action arg # ', obs["masks"]["action_arg"])   # shape: [8]
-    print('# place # ', obs["masks"]["place"])   # shape: [36]
-    print('# equip # ', obs["masks"]["equip"])   # shape: [36]
-    print('# destroy # ', obs["masks"]["destroy"])   # shape: [36]
-    print('# destroy # ', obs["masks"]["craft_smelt"])  # shape: [244] type: bool
-    # print('# masks # ', obs["masks"])
-
-
 def print_equipment(obs):
     # all shape is [6]
     # print('# equipment # ', obs['equipment']) 
@@ -116,10 +106,16 @@ def env_make():
         # need_all_success = False,
         voxel_size = dict(xmin=-1,ymin=0,zmin=1,xmax=1,ymax=1,zmax=2),
         use_voxel = True,
-        # custom_commands = ["/give @p minecraft:diamond_axe 1 0"],
+        custom_commands = ["/give @p minecraft:diamond_axe 1 0"],
         # force_slow_reset_interval = 2,
         world_seed=0,  # 123
         seed=42,
+        use_lidar=True,
+        lidar_rays=[
+                (np.pi * pitch / 180, np.pi * yaw / 180, 999)
+                for pitch in np.arange(-180, 180, 15)
+                for yaw in np.arange(-180, 180, 15)
+        ],
     )
 
 
@@ -148,6 +144,9 @@ def test_pynput_in_minedojo():
         # print_equipment(obs)
         # break
         # env.render()
+        control = listener.get_control()
+        if control != None:
+            print('# {} #\n {}'.format(control, obs[control]))
         time.sleep(0.05)
         if done:
             break
