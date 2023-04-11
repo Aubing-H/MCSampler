@@ -34,10 +34,16 @@ class CraftSampler:
 
     def __init__(self, data_dir='./output', image_h_w=(260, 380), goal='log', horizon=200) -> None:
         self.name = ''.join(random.sample(RAND_CHARACTER_RAW, RAND_LEN))
-        self.env = lmdb.open(os.path.join(data_dir, 'lmdb-test'))
+        lmdb_dir = os.path.join(data_dir, 'lmdb-test')
+        if not os.path.exists(lmdb_dir):
+            os.makedirs(lmdb_dir)
+        self.env = lmdb.open(lmdb_dir, map_size=int(1e9))
         
         self.imholder = ImageHolder()
-        self.holder = VideoHolder(os.path.join(data_dir, 'video-sample', 
+        video_sample_dir = os.path.join(data_dir, 'video-sample')
+        if not os.path.exists(video_sample_dir):
+            os.makedirs(video_sample_dir)
+        self.holder = VideoHolder(os.path.join(video_sample_dir, 
                                                self.name + '.mp4'))
         self.holder.init_write_frame(*image_h_w)
         self.goal, self.horizon = goal, horizon
@@ -76,41 +82,104 @@ class CraftSampler:
         self.env.close()
 
 
+def get_env(image_size, goal='log'):
+    if goal == 'log':
+        return minedojo.make(
+            task_id="harvest",  # _wool_with_shears_and_sheep
+            image_size=image_size,
+            use_voxel = True,
+            # world_seed=9,
+            # seed=7,
+            )
+    else:
+        return minedojo.make(
+            task_id="harvest",  # _wool_with_shears_and_sheep
+            image_size=image_size,
+            use_voxel = True,
+            initial_mob_spawn_range_low = (-30, 1, -30),
+            initial_mob_spawn_range_high = (30, 3, 30),
+            initial_mobs = ["sheep", "cow", "pig", "chicken"] * 4,
+            target_names = ["sheep", "cow", "pig", "chicken", "log"],
+            # snow_golem
+            target_quantities = 1,
+            reward_weights = 1,
+            initial_inventory = [],
+            specified_biome = "plains",
+            )
+
+
+def finish_check(obs, goal):
+    if goal == 'log':
+        for name in ['log', 'log2']:
+            if name in obs['inventory']['name']:
+                return True
+    goal_target_map = {
+        'sheep': 'mutton',  # also wool
+        'cow': 'beef',  # also feather
+        'pig': 'porkchop',
+        'chicken': 'chicken',
+    }
+    if goal_target_map[goal] in obs['inventory']['name']:
+        return True
+    return False
+
+
 def task_havest_sheep():
+    sample_on = True
     image_size = (480, 640)
-    env = minedojo.make(
-        task_id="harvest",  # _wool_with_shears_and_sheep
-        image_size=image_size,
-        use_voxel = True,
-        world_seed=9,
-        seed=7,
-    )
+
+    goal, horizon = 'log', 500
+    # goal, horizon = 'sheep', 3000
+    # goal, horizon = 'cow', 3000  # pdy7jqvh3t: actually cow but mark as pig
+    # goal, horizon = 'pig', 3000
+
+    env = get_env(image_size, goal)
     obs = env.reset()
     # get view mid, since it differs in different settings
     view_mid = env.action_space.no_op()[3]
     listener = KeyMouseListener(view_mid)
     listener.start()
-
-    goal, horizon = 'log', 200
-    sampler = CraftSampler('./output', image_h_w=image_size, goal=goal,
+    
+    if sample_on:
+        sampler = CraftSampler('./output', image_h_w=image_size, goal=goal,
                            horizon=horizon)
 
-    for i in range(horizon):
-        action = listener.get_action()
-        obs, reward, done, info = env.step(action)
-        control = listener.get_control()
+    step = 0
+    while True:
+        try:
+            action = listener.get_action()
+            obs, reward, done, info = env.step(action)
+            step += 1
+            control = listener.get_control()
 
-        # sample data
-        sampler.sample(obs, action)
+            # sample data
+            if sample_on:
+                sampler.sample(obs, action)
 
-        if control == 'exit':
-            break
-        elif control == 'masks':
-            print_action_mask(obs)
-        elif control != None:
-            print(obs[control])
-        time.sleep(0.15)  # 20fps
+            if finish_check(obs, goal):
+                print('Task finished with {} steps'.format(step))
+                break
+            # control command
+            if control == 'exit':
+                print('Task unfinished mannually')
+                break
+            elif control == 'masks':
+                print_action_mask(obs)
+            elif control != None:
+                print(obs[control])
+            # max steps setting
+            if sample_on == True and step >= horizon:
+                print('Task unfinished. Max steps {} have cost'.format(horizon))
+                break
+            time.sleep(0.05)  # 20fps
+        except Exception as e:
+            print(e)
+        finally:
+            print('Finally save sampled data')
+            if sample_on:
+                sampler.save_data()
+                sampler.close_lmdb()
     env.close()
-
-    sampler.save_data()
-    sampler.close_lmdb()
+    if sample_on:
+        sampler.save_data()
+        sampler.close_lmdb()
