@@ -61,8 +61,16 @@ class CraftSampler:
         # unchange in traj
         self.traj_meta['biome'].append(obs["location_stats"]["biome_id"])  # (1, ) long
         # step and prev_action is implicit in previous info
-
         self.holder.write_frame(self.imholder.chw2hwc(obs['rgb'])[...,::-1])
+        
+        '''data process in Controller
+            rgb = torch.from_numpy(obs['rgb']).unsqueeze(0).to(device=self.device, dtype=torch.float32).permute(0, 3, 1, 2)
+            res_obs['rgb'] = resize_image(rgb, target_resolution=(120, 160))
+            res_obs['voxels'] = torch.from_numpy(obs['voxels']).reshape(-1).unsqueeze(0).to(device=self.device, dtype=torch.long)
+            res_obs['compass'] = torch.from_numpy(obs['compass']).unsqueeze(0).to(device=self.device, dtype=torch.float32)
+            res_obs['gps'] = torch.from_numpy(obs['gps'] / np.array([1000., 100., 1000.])).unsqueeze(0).to(device=self.device, dtype=torch.float32)
+            res_obs['biome'] = torch.from_numpy(obs['biome_id']).unsqueeze(0).to(device=self.device, dtype=torch.long)
+        '''
 
     def save_data(self):
         for name in ['voxels', 'compass', 'gps', 'action']:
@@ -106,6 +114,30 @@ def get_env(image_size, goal='log'):
             initial_inventory = [],
             specified_biome = "plains",
             )
+    # the plains env in Controller
+    minedojo.make(
+        task_id = "harvest",
+        image_size = list(img_size)[::-1],
+        initial_mob_spawn_range_low = (-30, 1, -30),
+        initial_mob_spawn_range_high = (30, 3, 30),
+        initial_mobs = ["sheep", "cow", "pig", "chicken"] * 4,
+        target_names = ["sheep", "cow", "pig", "chicken", "log"],
+        # snow_golem
+        target_quantities = 1,
+        reward_weights = 1,
+        initial_inventory = [],
+        fast_reset_random_teleport_range = 100,
+        # start_at_night = True,
+        no_daylight_cycle = True,
+        specified_biome = "plains",
+        # generate_world_type = "flat",
+        max_nsteps = 1000,
+        need_all_success = False,
+        voxel_size = dict(xmin=-1,ymin=0,zmin=1,xmax=1,ymax=1,zmax=2),
+        use_voxel = True,
+        custom_commands = ["/give @p minecraft:diamond_axe 1 0"],
+        force_slow_reset_interval = 2,
+    )
 
 
 def finish_check(obs, goal):

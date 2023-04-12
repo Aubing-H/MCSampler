@@ -21,4 +21,4 @@ TEST = {
     'readlmdb': test_readlmdb,
 }
 
-TEST['havest_sheep']()
+TEST['readlmdb']()

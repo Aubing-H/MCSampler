@@ -13,7 +13,8 @@ def test_readlmdb():
 
     lmdb_set = set()
     goal_dict = {}
-    txn.delete('pdy7jqvh3t'.encode())
+    # txn.delete('pdy7jqvh3t'.encode())  # pdy7jqvh3t.mp4
+    # txn.commit()
 
     for key, value in txn.cursor():
         data = key.decode()
@@ -32,10 +33,3 @@ def test_readlmdb():
         print('{}: num {}'.format(key, len(val)))
 
     env.close()
-        # traj_item = traj_data[36]
-        # for k, v in traj_item.items():
-        #     print('{}: {}'.format(k, v))
-
-        # traj_item = traj_data[108]
-        # for k, v in traj_item.items():
-        #     print('{}: {}'.format(k, v))

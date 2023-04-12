@@ -15,7 +15,8 @@ def test_write_frames():
 def test_videoholder_readvideo():
     image_demo_path = './output/test/demo.jpg'
     image_demo_path_blue = './output/test/demo_blue.jpg'
-    video_path = '/home/vcis11/userlist/houjinbing/Documents/Video-Pre-Training/vpt_m3.mp4'
+    video_path = '/home/vcis11/userlist/houjinbing/Documents/minecraft'\
+        '/MCSampler/output/video-sample/3his5upgxj.mp4'
     image_holder = ImageHolder()
     holder = VideoHolder(video_path)
     frame_gen = holder.read_frame()
