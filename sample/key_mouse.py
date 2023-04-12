@@ -40,7 +40,7 @@ control_keys = {
 
 class KeyMouseListener:
 
-    def __init__(self, view_mid) -> None:
+    def __init__(self, view_mid, valve=0) -> None:
         # ...or, in a non-blocking fashion:
         '''Hint:
             act[0]=1/2, forward/backward
@@ -50,7 +50,7 @@ class KeyMouseListener:
             act[4]=0-24, yaw, horizontal
             act[5]=1/2/3/4/5/6/7, use/drop/attack/craft/equip/place/destroy'''
         self._mouse_position_ = [0, 0]
-        self.__valve__ = 0  # position addition threshold
+        self.__valve__ = valve  # position addition threshold
         self._h_max_, self._h_min_, self._v_max_, self._v_min_ = view_mid * 2, 0, view_mid * 2, 0
         self._action_ = [0, 0, 0, self._h_max_//2, self._v_max_//2, 0, 0, 0]
         self._mouse_left_on_ = False

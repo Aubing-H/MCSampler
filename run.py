@@ -1,4 +1,4 @@
-
+import sys
 
 from sample.main import task_havest_sheep
 
@@ -21,4 +21,5 @@ TEST = {
     'readlmdb': test_readlmdb,
 }
 
-TEST['readlmdb']()
+print(*sys.argv)
+TEST['havest_sheep'](*sys.argv[1:])
