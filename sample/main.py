@@ -146,6 +146,7 @@ def finish_check(obs, goal):
         for name in ['log', 'log2']:
             if name in obs['inventory']['name']:
                 return True
+        return False
     goal_target_map = {
         'sheep': 'mutton',  # also wool
         'cow': 'beef',  # also feather
@@ -157,9 +158,9 @@ def finish_check(obs, goal):
     return False
 
 
-def task_havest_sheep(goal='log', sample_on = True,
-                    image_size = (480, 640)):
-    
+def task_havest_sheep(goal='log'):
+    sample_on=True
+    image_size = (480, 640)
     max_steps = {
         'log': 500,
         'sheep': 1000,

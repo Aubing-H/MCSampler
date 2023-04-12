@@ -9,7 +9,7 @@ from test.test_utils import test_videoholder_readvideo, \
 from test.test_lmdb import test_readlmdb
 
 TEST = {
-    'havest_sheep': task_havest_sheep,
+    'havest': task_havest_sheep,
 
     'pynput': test_pynput,
     'pynput_minedojo': test_pynput_in_minedojo,
@@ -22,4 +22,4 @@ TEST = {
 }
 
 print(*sys.argv)
-TEST['havest_sheep'](*sys.argv[1:])
+TEST['havest'](*sys.argv[1:])
