@@ -12,7 +12,7 @@ This is a project about sampling data mannually
     
     i recommand git clone its code and python setup.py install firstly, than build gradle (Malmo env): enter into dir `./minedojo/sim/Malmo/Minecraft` and run ./launchClinet.sh (after build it will show a window, close it and it will show success).
  - create dir ./output/lmdb-test and ./output/video-sample or it may go wrong.
- - python run.py
+ - `python run.py [goal]`, [goal] can be any of "log, sheep, cow, pig", for example `python run.py sheep` means get sheep task
 
 **Run and play minecraft**
 
