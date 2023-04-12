@@ -4,8 +4,6 @@ This is a project about sampling data mannually
 
 ## Sampling
 
-### Keybard Listening
-
 **Environment**
 
  - install minedojo: https://docs.minedojo.org/sections/getting_started/install.html
@@ -46,4 +44,15 @@ The following info will show in shell window.
  - `M`: show location_stats.
  - `K`: show craft parameters availble.
 
+## Dataset
 
+**dataset format**
+
+Lmdb data:
+
+- First layer is a dict[key: traj_id, value: traj_data]
+- Second layer traj_data is a dict[key: data_name, val: array list], too. Data_name is of: compass, voxels, action, and so on.
+
+Video frames data:
+
+- One video is one traj frames.
