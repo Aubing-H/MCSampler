@@ -85,7 +85,7 @@ class CraftSampler:
         txn.put(self.name.encode(), traj_meta_bytes)
         txn.commit()  # commit transaction
         print('Traj saved, name: {}, total: {}'.format(self.name, 
-                                                       len(self.traj_meta['goal'])))
+                                                       self.traj_meta['horizon']))
 
     def close_lmdb(self):
         self.env.close()
