@@ -59,4 +59,4 @@ simulator:
 cur_goal: log
 device: 5
 sample_on: False
-child_on: True
+child_on: False

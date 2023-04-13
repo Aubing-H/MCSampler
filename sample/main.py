@@ -160,17 +160,17 @@ def init_model(cfg):
 
 def harvest(cfg):
     goal = cfg['cur_goal']
-    
-    producer_pipe, consumer_pipe = mp.Pipe()
-    worker = ChildWorker(
-        consumer_pipe, 
-        'id', 
-        model_generator=init_model,
-        cfg=cfg,
-    )
-    worker.start()
-
     sample_on, child_on = cfg['sample_on'], cfg['child_on']
+    if child_on:
+        producer_pipe, consumer_pipe = mp.Pipe()
+        worker = ChildWorker(
+            consumer_pipe, 
+            'id', 
+            model_generator=init_model,
+            cfg=cfg,
+        )
+        worker.start()
+
     image_size = (480, 640)
     max_steps = {
         'log': 500,
@@ -193,10 +193,10 @@ def harvest(cfg):
     print('Start sample with goal: {}, max step: {}, act mid: {}, sampler: {}'\
           .format(goal, horizon, view_mid, 'child' if child_on else 'user'))
 
-    step, done = 0, False
+    step, done, child_control = 0, False, True
     while True:
         try:
-            if child_on:
+            if child_on and child_control:
                 producer_pipe.send(('get_action', (goal, obs)))
                 while True:  # wait for message
                     producer_pipe.poll(None)
@@ -222,9 +222,9 @@ def harvest(cfg):
                 print('Task unfinished mannually')
                 break
             elif control == 'sample_switch':
-                child_on = not child_on
-                print('switch sampler to {}'.format('child' if child_on else 
-                                                    'user'))
+                child_control = not child_control
+                print('switch sampler to {}'.format('child' if child_control
+                                                    else 'user'))
             elif control == 'masks':
                 print_action_mask(obs)
             elif control != None:
@@ -244,7 +244,8 @@ def harvest(cfg):
     if sample_on:
         sampler.save_data(done)
         sampler.close_lmdb()
-    producer_pipe.send(('kill_proc', None))
-    producer_pipe.close()
+    if child_on:
+        producer_pipe.send(('kill_proc', None))
+        producer_pipe.close()
 
 
