@@ -26,7 +26,10 @@ class EnvWorker(mp.Process):
                     self._send_message('req_action', (self.goal, obs))
                     command, args = self._recv_message()
                     if command == 'child_action':
-                        action = args  #  
+                        action = args  # 
+                    elif command == 'kill_proc':
+                        print('Error ocur, sub-process stoped.')
+                        break 
                     else:
                         print('Error: command (child_action): {}'.format(command))
                         action = self.listener.get_action()
@@ -65,6 +68,8 @@ class EnvWorker(mp.Process):
                 if self.sample_on:
                     self.sampler.save_data(done)
                     self.sampler.close_lmdb()
+                self._send_message('finished', None)
+                self.pipe.close()
                 raise e
         self.env.close()
         if self.sample_on:

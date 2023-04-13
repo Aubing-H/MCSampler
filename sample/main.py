@@ -17,7 +17,12 @@ def harvest(cfg):
         producer_pipe.poll(None)
         command, args = producer_pipe.recv()
         if command == 'req_action':
-            action = model.get_action(*args)  # goal, obs
+            try:
+                action = model.get_action(*args)  # goal, obs
+                # print('# action: {}'.format(action))
+            except Exception as e:
+                producer_pipe.send(('kill_proc', None))
+                raise e
             producer_pipe.send(('child_action', action))
         elif command == 'finished':
             break

@@ -108,13 +108,13 @@ class ChildSampler:
     
     def get_action(self, goal, obs):
         states = self.preprocess_obs(obs)
-        self._get_action(goal, states)
+        return self._get_action(goal, states)
 
     def _get_action(self, goal, obs, horizon=20):
         goals = torch.from_numpy(self.embedding_dict[goal]).to(device=self.device)
         get_action = self.model.module.get_action if hasattr(self.model, 'module') else self.model.get_action
         horizons = torch.tensor([horizon], dtype=torch.long).to(self.device)
-        print('goals shape: {}'.format(goals.shape))
+        # print('goals shape: {}'.format(goals.shape))
         action_preds, mid_info = get_action(
             goals=goals, 
             states=obs, 
