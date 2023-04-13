@@ -1,0 +1,30 @@
+[2023-04-13 14:38:57,926][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:39:02,808][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:40:06,191][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 1/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:40:11,381][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:40:16,599][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:40:44,716][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 2/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:40:49,916][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:40:54,895][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:41:20,889][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 3/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:41:26,091][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:41:31,019][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:42:00,360][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 4/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:42:05,566][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:42:10,470][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:42:41,887][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 5/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:42:47,094][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:42:52,067][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:43:33,106][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 6/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:43:38,326][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:43:43,300][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:44:22,615][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 7/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:44:27,822][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:44:33,019][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:45:04,422][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 8/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:45:09,618][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:45:14,689][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:45:42,651][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 9/10.This is probably an intermittent race condition. Trying again (max tries 10).
+[2023-04-13 14:45:47,861][watchdog][INFO] - Launching watchdog daemonizer.
+[2023-04-13 14:45:52,675][watchdog][INFO] - Watchdog launched successfully.
+[2023-04-13 14:46:21,070][minedojo.sim.bridge.bridge_env.bridge_env][WARNING] - Minecraft build or launch just failed on attempt 10/10.This is probably an intermittent race condition. Trying again (max tries 10).

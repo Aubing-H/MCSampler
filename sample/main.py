@@ -5,7 +5,10 @@ import pickle
 import lmdb
 import numpy as np
 import os
+import torch
+import hydra
 
+from src.child import ChildSampler
 from sample.key_mouse import KeyMouseListener
 from sample.utils import VideoHolder, ImageHolder
 
@@ -53,24 +56,15 @@ class CraftSampler:
 
     def sample(self, obs, action):
         # change in traj
-        self.traj_meta['voxels'].append(obs["voxels"]["block_meta"])  # (3, 3, 3) np.int64
+        self.traj_meta['voxels'].append(obs["voxels"]["block_meta"])  # (3, 2, 2) np.int64
         self.traj_meta['compass'].append(np.concatenate([obs["location_stats"]["pitch"], 
                                                          obs["location_stats"]["yaw"]]))
         self.traj_meta['gps'].append(obs["location_stats"]["pos"])  # (3,) float
         self.traj_meta['action'].append(np.array(action))
         # unchange in traj
         self.traj_meta['biome'].append(obs["location_stats"]["biome_id"])  # (1, ) long
-        # step and prev_action is implicit in previous info
+        # step and prev_action is implicit in previous info, [RGB, H, W] -> [H, W, BGR]
         self.holder.write_frame(self.imholder.chw2hwc(obs['rgb'])[...,::-1])
-        
-        '''data process in Controller
-            rgb = torch.from_numpy(obs['rgb']).unsqueeze(0).to(device=self.device, dtype=torch.float32).permute(0, 3, 1, 2)
-            res_obs['rgb'] = resize_image(rgb, target_resolution=(120, 160))
-            res_obs['voxels'] = torch.from_numpy(obs['voxels']).reshape(-1).unsqueeze(0).to(device=self.device, dtype=torch.long)
-            res_obs['compass'] = torch.from_numpy(obs['compass']).unsqueeze(0).to(device=self.device, dtype=torch.float32)
-            res_obs['gps'] = torch.from_numpy(obs['gps'] / np.array([1000., 100., 1000.])).unsqueeze(0).to(device=self.device, dtype=torch.float32)
-            res_obs['biome'] = torch.from_numpy(obs['biome_id']).unsqueeze(0).to(device=self.device, dtype=torch.long)
-        '''
 
     def save_data(self, done):
         for name in ['voxels', 'compass', 'gps', 'action']:
@@ -158,8 +152,11 @@ def finish_check(obs, goal):
     return False
 
 
-def task_havest_sheep(goal='log'):
-    sample_on=True
+def harvest(cfg):
+    goal = cfg['cur_goal']
+    child = ChildSampler(cfg, device=torch.cuda.set_device(cfg['device'])) 
+
+    sample_on, child_on = cfg['sample_on'], cfg['child_on']
     image_size = (480, 640)
     max_steps = {
         'log': 500,
@@ -167,7 +164,7 @@ def task_havest_sheep(goal='log'):
         'cow': 1000,
         'pig': 1000,
     }
-    horizon = max_steps[goal]
+    horizon = max_steps[goal] * (1 + int(child_on))
 
     env = get_env(image_size, goal)
     obs = env.reset()
@@ -179,14 +176,16 @@ def task_havest_sheep(goal='log'):
     if sample_on:
         sampler = CraftSampler('./output', image_h_w=image_size, goal=goal)
 
-    print('Start sample with goal: {}, max step: {}, act mid: {}'.format(
-        goal, horizon, view_mid
-    ))
+    print('Start sample with goal: {}, max step: {}, act mid: {}, sampler: {}'\
+          .format(goal, horizon, view_mid, 'child' if child_on else 'user'))
 
     step, done = 0, False
     while True:
         try:
-            action = listener.get_action()
+            if child_on:
+                action = child.get_action(goal, obs)
+            else:
+                action = listener.get_action()
             obs, _, _, _ = env.step(action)
             step += 1
             # sample data
@@ -202,6 +201,10 @@ def task_havest_sheep(goal='log'):
             if control == 'exit':
                 print('Task unfinished mannually')
                 break
+            elif control == 'sample_switch':
+                child_on = not child_on
+                print('switch sampler to {}'.format('child' if child_on else 
+                                                    'user'))
             elif control == 'masks':
                 print_action_mask(obs)
             elif control != None:
@@ -221,3 +224,5 @@ def task_havest_sheep(goal='log'):
     if sample_on:
         sampler.save_data(done)
         sampler.close_lmdb()
+
+
