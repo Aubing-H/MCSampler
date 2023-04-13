@@ -24,8 +24,8 @@ TEST = {
 @hydra.main(config_path="configs", config_name="defaults")
 def main(cfg):
 
-    harvest(cfg)
-    # test_child_model(cfg)
+    # harvest(cfg)
+    test_child_model(cfg)
     # TEST['childsampler']()
 
 if __name__ == '__main__':

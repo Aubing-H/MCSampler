@@ -7,10 +7,12 @@ import numpy as np
 import os
 import torch
 import hydra
+import multiprocessing as mp
 
 from src.child import ChildSampler
 from sample.key_mouse import KeyMouseListener
 from sample.utils import VideoHolder, ImageHolder
+from sample.child_worker import ChildWorker
 
 
 RAND_CHARACTER_RAW = 'zyxwvutsrqponmlkjihgfedcba0123456789'
@@ -152,9 +154,21 @@ def finish_check(obs, goal):
     return False
 
 
+def init_model(cfg):
+    return ChildSampler(cfg, device=torch.cuda.set_device(cfg['device']))
+
+
 def harvest(cfg):
     goal = cfg['cur_goal']
-    child = ChildSampler(cfg, device=torch.cuda.set_device(cfg['device'])) 
+    
+    producer_pipe, consumer_pipe = mp.Pipe()
+    worker = ChildWorker(
+        consumer_pipe, 
+        'id', 
+        model_generator=init_model,
+        cfg=cfg,
+    )
+    worker.start()
 
     sample_on, child_on = cfg['sample_on'], cfg['child_on']
     image_size = (480, 640)
@@ -183,7 +197,13 @@ def harvest(cfg):
     while True:
         try:
             if child_on:
-                action = child.get_action(goal, obs)
+                producer_pipe.send(('get_action', (goal, obs)))
+                while True:  # wait for message
+                    producer_pipe.poll(None)
+                    command, args = producer_pipe.recv()
+                    if command == 'child_action':
+                        action = args
+                        break
             else:
                 action = listener.get_action()
             obs, _, _, _ = env.step(action)
@@ -224,5 +244,7 @@ def harvest(cfg):
     if sample_on:
         sampler.save_data(done)
         sampler.close_lmdb()
+    producer_pipe.send(('kill_proc', None))
+    producer_pipe.close()
 
 
