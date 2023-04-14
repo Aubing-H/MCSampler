@@ -56,3 +56,19 @@ Lmdb data:
 Video frames data:
 
 - One video is one traj frames.
+
+
+## SamplerV2
+
+You can sample data with child model, teach it how to play.
+
+**Control Key**
+
+ - `H`: switch child model or user model.
+ 
+**Models**
+
+model
+   |-weights
+      |-attn.pth: mineclip model
+      |-child.pt: children model
