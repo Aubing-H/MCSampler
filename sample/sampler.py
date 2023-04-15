@@ -2,8 +2,9 @@ import random
 import pickle
 import os
 import numpy as np
-from sample.utils import VideoHolder, ImageHolder
 import lmdb
+
+from sample.utils import VideoHolder, ImageHolder, get_action_quality
 
 
 RAND_CHARACTER_RAW = 'zyxwvutsrqponmlkjihgfedcba0123456789'
@@ -16,6 +17,7 @@ class CraftSampler:
         lmdb_dir = os.path.join(data_dir, 'lmdb-test')
         if not os.path.exists(lmdb_dir):
             os.makedirs(lmdb_dir)
+        print('lmdb_dir:', lmdb_dir)
         self.env = lmdb.open(lmdb_dir, map_size=int(1e9))
         
         self.imholder = ImageHolder()
@@ -49,6 +51,7 @@ class CraftSampler:
             self.traj_meta[name] = np.array(self.traj_meta[name])
         self.traj_meta['horizon'] = np.array([len(self.traj_meta['action'])])
         self.traj_meta['done'] = np.array([done])
+        self.traj_meta['action_quality'] = get_action_quality(self.traj_meta)
         
         traj_meta_bytes = pickle.dumps(self.traj_meta)
         txn = self.env.begin(write=True)

@@ -4,56 +4,7 @@ import os
 import numpy as np
 import random
 
-
-def get_action_var(action_arr):
-    # dataset action more various -> better
-    var_weights = np.array([[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]], 
-                           dtype=np.float32)
-    wg_actions = action_arr * var_weights
-    return np.sum(np.var(wg_actions, axis=0))
-
-def get_action_switch_var(action_arr, skip_frame=3):
-    if len(action_arr) <= 1:
-        return 0.
-    i, diffs = 0, []
-    while i < len(action_arr) - 1:
-        cur = min(len(action_arr) - 1, i + random.randint(1, skip_frame))
-        diffs.append(action_arr[cur]-action_arr[i])
-        i = cur
-    return np.sum(np.var(np.array(diffs), axis=0))
-
-
-def get_action_density(action_arr):
-    stay = np.array([0, 2, 0, 5, 5, 0, 0, 0])   # no op
-    mask = [0 if (action == stay).all() else 1 for action in action_arr]
-    return np.array(mask).mean()
-
-
-def get_action_quality(traj_data, windows=20):
-    traj_len = len(traj_data['action'])
-    traj_action = []
-    for action in traj_data['action']:
-        action[1] = 2 * ((action[1] + 1) % 3)  # 0, 1, 2 -> 2, 4, 0
-        action[2] *= 2  # jump
-        action[3] = min(action[3], 6) if action[3] > 5 else max(action[3], 4)
-        action[4] = min(action[4], 6) if action[4] > 5 else max(action[4], 4)
-        action[5] = 3 if action[5] > 0  else 0 # attack
-        traj_action.append(action)
-    traj_action = np.stack(traj_action)
-
-    '''First traj total var
-    [0.21464314, 0.4556213, 0., 2.83243845, 2.48126233, 2.55621302, 0., 0., ]
-    '''
-    action_quality = []
-    for i in range(traj_len):
-        end = min(i + 20, traj_len)
-        action_arr = traj_action[i: end]
-        a_var = get_action_var(action_arr)
-        a_dense = get_action_density(action_arr)
-        a_sw_var = get_action_switch_var(action_arr)
-        q = a_var + a_dense + a_sw_var
-        action_quality.append(q)
-    return np.array(action_quality)
+from sample.utils import get_action_quality
 
 
 def test_get_action_quality():
@@ -69,11 +20,34 @@ def test_get_action_quality():
         break
 
 
+def update_lmdb():
+    ''' modify or update lmdb data '''
+    lmdb_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft'\
+        '/MC-Controller/dataset/plains_lmdb/lmdb-test'
+    lmdb_dir = './output/findlog7traj0412/lmdb-test'
+    out_lmdb_dir = './output/findlog7traj0412aq/lmdb-test'
+    env = lmdb.open(lmdb_dir)
+    out_env = lmdb.open(out_lmdb_dir)
+    txn = env.begin()
+    out_txn = out_env.begin(write=True)
+    for key, value in txn.cursor():
+        name = key.decode()
+        traj_data = pickle.loads(value)
+        action_quality = get_action_quality(traj_data)
+        traj_data['action_quality'] = action_quality
+        # handmadeenv0410 # [T, 3, 3, 3] -> [T, 3, 2, 2]
+        # traj_data['voxels'] = traj_data['voxels'][:, :, 1:, 1:]
+        out_txn.put(name.encode(), pickle.dumps(traj_data))
+    out_txn.commit()
+    env.close()
+    out_env.close()
+
+
 def test_readlmdb():
-    lmdb_dir = './output/lmdb-test'
-    env  = lmdb.open(lmdb_dir)
+    lmdb_dir = './output'
+    env  = lmdb.open(lmdb_dir + '/lmdb-test')
     txn = env.begin(write=True)
-    video_names = os.listdir('./output/video-sample')
+    video_names = os.listdir(lmdb_dir + '/video-sample')
     video_names = [name.split('.')[0] for name in video_names]
     video_name_set = set(video_names)
 
@@ -100,7 +74,12 @@ def test_readlmdb():
         print('{}: num {}'.format(key, len(val)))
 
     print('-------- data info check -------')
+    ct = 0
     for key, value in txn.cursor():
+        if ct > 0:
+            print(key.decode())
+            ct += 1
+            continue
         data = key.decode()
         traj_data = pickle.loads(value)
         for k, v in traj_data.items():
@@ -110,6 +89,38 @@ def test_readlmdb():
                 print(k, v)
             else:
                 print(k, len(v))
-        break
-
+        print(key.decode())
+        ct += 1
+    print('lmdb len: {}'.format(ct))
     env.close()
+
+
+def gather_data():
+    source_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MCSampler/outputs/2023-04-15'
+    target_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MCSampler/output'
+    sub_dirs = os.listdir(source_dir)
+    traj_dict = {}
+    for sub in sub_dirs:
+        lmdb_dir = os.path.join(source_dir, sub, 'output')
+        if not os.path.exists(lmdb_dir):
+            continue
+        env = lmdb.open(lmdb_dir + '/lmdb-test')
+        txn = env.begin()
+        for key, value in txn.cursor():
+            traj_data = pickle.loads(value)
+            traj_dict[key.decode()] = traj_data
+        env.close()
+        for vf in os.listdir(lmdb_dir + '/video-sample'):
+            vs = os.path.join(lmdb_dir + '/video-sample', vf)
+            vt = os.path.join(target_dir + '/video-sample', vf)
+            os.system('mv {} {}'.format(vs, vt))
+    
+    new_env = lmdb.open(target_dir + '/lmdb-test')
+    txn = new_env.begin(write=True)
+    for key, value in traj_dict.items():
+        try:
+            txn.put(key.encode(), pickle.dumps(value))
+        except Exception as e:
+            print('Error', e)
+    txn.commit()
+    new_env.close()

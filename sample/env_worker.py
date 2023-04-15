@@ -103,7 +103,7 @@ class EnvWorker(mp.Process):
         self.listener = KeyMouseListener(view_mid, self.valve)
         self.listener.start()
         if self.sample_on:
-            self.sampler = CraftSampler('./output', image_h_w=image_size, 
+            self.sampler = CraftSampler(self.cfg['output_dir'], image_h_w=image_size, 
                                         goal=self.goal)
 
         print('Start sample with goal: {}, max step: {}, act mid: {}'\

@@ -1,5 +1,6 @@
 import sys
 import hydra
+import pathlib
 
 from sample.main import harvest
 
@@ -7,7 +8,8 @@ from test.test_pynput import test_pynput, test_pynput_in_minedojo
 from test.test_minedojo import test_minedojo
 from test.test_utils import test_videoholder_readvideo, \
     test_videoholder_writevideo
-from test.test_lmdb import test_readlmdb, test_get_action_quality
+from test.test_lmdb import test_readlmdb, test_get_action_quality,\
+    update_lmdb, gather_data
 from test.test_child_model import test_child_model
 
 TEST = {
@@ -20,15 +22,19 @@ TEST = {
     'writevideo': test_videoholder_writevideo,
     'readlmdb': test_readlmdb,
     'action_quality': test_get_action_quality,
+    'update_lmdb': update_lmdb,
+    'gather_data': gather_data,
 }
 
 @hydra.main(config_path="configs", config_name="defaults")
 def main(cfg):
-
+    ''' attention: the working path is changed '''
+    print('## main path: ', pathlib.Path.cwd())
+    # gather_data()
     harvest(cfg)
     # test_child_model(cfg)
     
 
 if __name__ == '__main__':
-    # main()
-    TEST['action_quality']()
+    main()
+    # TEST['readlmdb']()
