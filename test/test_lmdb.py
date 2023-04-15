@@ -21,13 +21,19 @@ def test_get_action_quality():
 
 
 def update_lmdb():
-    ''' modify or update lmdb data '''
+    ''' modify or update lmdb data:
+            plains_lmdb -> diamondaxe0412aq
+            handmadeenv0410 -> handmadeenv0410aq
+            findlog7traj0412 -> findlog7traj0412aq
+
+    '''
     lmdb_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft'\
-        '/MC-Controller/dataset/plains_lmdb/lmdb-test'
+        '/MC-Controller/dataset/handmadeenv0410/lmdb-test'
     lmdb_dir = './output/findlog7traj0412/lmdb-test'
-    out_lmdb_dir = './output/findlog7traj0412aq/lmdb-test'
+    out_lmdb_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft'\
+        '/MC-Controller/dataset/findlog7traj0412aq/lmdb-test'
     env = lmdb.open(lmdb_dir)
-    out_env = lmdb.open(out_lmdb_dir)
+    out_env = lmdb.open(out_lmdb_dir, map_size=int(1e9))
     txn = env.begin()
     out_txn = out_env.begin(write=True)
     for key, value in txn.cursor():
@@ -44,7 +50,8 @@ def update_lmdb():
 
 
 def test_readlmdb():
-    lmdb_dir = './output'
+    lmdb_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MC-Controller/dataset/'\
+        'findlog7traj0412aq'
     env  = lmdb.open(lmdb_dir + '/lmdb-test')
     txn = env.begin(write=True)
     video_names = os.listdir(lmdb_dir + '/video-sample')

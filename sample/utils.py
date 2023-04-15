@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 import random
+import copy
 
 def image_desc(frame, image_length):
     rows, columns, _ = frame.shape
@@ -109,12 +110,13 @@ def get_action_quality(traj_data, windows=20):
     traj_len = len(traj_data['action'])
     traj_action = []
     for action in traj_data['action']:
-        action[1] = 2 * ((action[1] + 1) % 3)  # 0, 1, 2 -> 2, 4, 0
-        action[2] *= 2  # jump
-        action[3] = min(action[3], 6) if action[3] > 5 else max(action[3], 4)
-        action[4] = min(action[4], 6) if action[4] > 5 else max(action[4], 4)
-        action[5] = 3 if action[5] > 0  else 0 # attack
-        traj_action.append(action)
+        act = copy.deepcopy(action)
+        act[1] = 2 * ((action[1] + 1) % 3)  # 0, 1, 2 -> 2, 4, 0
+        act[2] *= 2  # jump
+        act[3] = min(action[3], 6) if action[3] > 5 else max(action[3], 4)
+        act[4] = min(action[4], 6) if action[4] > 5 else max(action[4], 4)
+        act[5] = 3 if action[5] > 0  else 0 # attack
+        traj_action.append(act)
     traj_action = np.stack(traj_action)
 
     '''First traj total var
