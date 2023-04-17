@@ -45,6 +45,8 @@ class CraftSampler:
         self.holder.write_frame(self.imholder.chw2hwc(obs['rgb'])[...,::-1])
 
     def save_data(self, done):
+        self.holder.release()
+
         for name in ['voxels', 'compass', 'gps', 'action']:
             self.traj_meta[name] = np.stack(self.traj_meta[name])
         for name in ['biome', 'goal']:
@@ -59,6 +61,5 @@ class CraftSampler:
         txn.commit()  # commit transaction
         print('Traj saved, name: {}, total: {}'.format(self.name, 
                                                        self.traj_meta['horizon']))
-
-    def close_lmdb(self):
         self.env.close()
+
