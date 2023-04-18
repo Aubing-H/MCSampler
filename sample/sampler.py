@@ -61,5 +61,7 @@ class CraftSampler:
         txn.commit()  # commit transaction
         print('Traj saved, name: {}, total: {}'.format(self.name, 
                                                        self.traj_meta['horizon']))
+        
+    def close_lmdb(self):
         self.env.close()
 

@@ -12,6 +12,7 @@ def harvest(cfg):
     producer_pipe, consumer_pipe = mp.Pipe()
     worker = EnvWorker(consumer_pipe, 'id', cfg)
     worker.start()
+    time.sleep(2)  # wait for env start
     model = ChildSampler(cfg, device=torch.cuda.set_device(cfg['device']))
     while True:
         producer_pipe.poll(None)

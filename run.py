@@ -9,7 +9,7 @@ from test.test_minedojo import test_minedojo
 from test.test_utils import test_videoholder_readvideo, \
     test_videoholder_writevideo
 from test.test_lmdb import test_readlmdb, test_get_action_quality,\
-    update_lmdb, gather_data
+    update_lmdb, gather_data, check_videos
 from test.test_child_model import test_child_model
 
 TEST = {
@@ -24,6 +24,7 @@ TEST = {
     'action_quality': test_get_action_quality,
     'update_lmdb': update_lmdb,
     'gather_data': gather_data,
+    'check_videos': check_videos, 
 }
 
 @hydra.main(config_path="configs", config_name="defaults")
@@ -36,5 +37,5 @@ def main(cfg):
     
 
 if __name__ == '__main__':
-    main()
-    # TEST['update_lmdb']()
+    # main()
+    TEST['check_videos']()
