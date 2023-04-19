@@ -1,5 +1,7 @@
 # Minecraft Sampler
 
+version-1.0
+
 This is a project about sampling data mannually
 
 ## Sampling
@@ -60,11 +62,13 @@ Video frames data:
 
 ## SamplerV2
 
+version-2.0 (sample method: user -> user + model)
+
 You can sample data with child model, teach it how to play.
 
 **Control Key**
 
- - `H`: switch child model or user model.
+ - `H`: switch child model or user model. Add sample_on_control mode, in this mode, the data only sampled after the control covert to user (also include the former few frames). 
  
 **Models**
 
@@ -74,3 +78,10 @@ model
       |-attn.pth: mineclip model
       |-child.pt: children model
 ```
+
+**Dataset**
+
+version-2.1 (change dataset format)
+
+The each dataset file contains at most 128 frames (considering data load speed, too much big videos cost a lot of contignous memeries). And the rgb frames will compress to 128x128 which is the same as the shape of Controller. For the ease of check data, we also save origin frames in videos files.
+

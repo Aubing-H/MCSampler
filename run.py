@@ -37,5 +37,5 @@ def main(cfg):
     
 
 if __name__ == '__main__':
-    # main()
-    TEST['check_videos']()
+    main()
+    # TEST['check_videos']()

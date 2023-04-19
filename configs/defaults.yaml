@@ -58,5 +58,5 @@ simulator:
 
 cur_goal: log
 device: 3
-sample_on: True
+sample_on: False
 output_dir: ${hydra:runtime.cwd}/output
