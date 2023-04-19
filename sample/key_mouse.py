@@ -32,10 +32,12 @@ control_keys = {
     # 'rays': 'y',
     'masks': 'k',
 
+    'sample_switch': 'h',
+
     'exit': keyboard.Key.esc, 
 }
 
-'''not used: b, f, h, j, l, n, t, z '''
+'''not used: b, f, j, l, n, t, z '''
 
 
 class KeyMouseListener:
