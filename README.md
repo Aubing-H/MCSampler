@@ -68,7 +68,9 @@ You can sample data with child model, teach it how to play.
  
 **Models**
 
+```
 model
    |-weights
       |-attn.pth: mineclip model
       |-child.pt: children model
+```
