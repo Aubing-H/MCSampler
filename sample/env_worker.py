@@ -4,6 +4,8 @@ from sample.key_mouse import KeyMouseListener
 from sample.sampler import CraftSampler
 import time
 
+MAX_FRAMES = 128
+
 class EnvWorker(mp.Process):
 
     def __init__(self, pipe, worker_id, cfg):
@@ -14,14 +16,31 @@ class EnvWorker(mp.Process):
 
         self.goal = cfg['cur_goal']
         self.sample_on = cfg['sample_on']
-        
+        self.spusr_only = cfg['sample_usr_only']
+        self.image_size = (480, 640)
+        self.sampler = None
+        self.get_video = cfg['get_video']
+
+        self.valve = 2  # sensitivy of mouse, increase when fps down
 
     def run(self):
-        self.init_state()
+        self.get_env()  # set self.env
+        # get view mid, since it differs in different settings
+        view_mid = self.env.action_space.no_op()[3]
+        self.listener = KeyMouseListener(view_mid, self.valve)
+        self.listener.start()
+        if self.sample_on and not self.spusr_only:
+            self.sampler = CraftSampler(self.cfg['output_dir'], 
+                image_h_w=self.image_size, goal=self.goal, get_video=self.get_video)
+
+        print('Start sample with goal: {}, act mid: {}'\
+            .format(self.goal, view_mid))
+        
         obs = self.env.reset()
-        step, done, child_control = 0, False, True
+        step, frame_ct, done, child_control = 0, 0, False, True
         while True:
             try:
+                # -------------------- get action --------------------------- #
                 if child_control:
                     self._send_message('req_action', (self.goal, obs))
                     command, args = self._recv_message()
@@ -31,50 +50,66 @@ class EnvWorker(mp.Process):
                         print('Error ocur, sub-process stoped.')
                         break 
                     else:
-                        print('Error: command (child_action): {}'.format(command))
+                        print('Error: command {}'.format(command))
                         action = self.listener.get_action()
                 else:
                     action = self.listener.get_action()
+                # ---------------------- env step --------------------------- #
                 obs, _, _, _ = self.env.step(action)
                 step += 1
-                # sample data
-                if self.sample_on:
+                # -------------------- sample data -------------------------- #
+                if self.sampler:
                     self.sampler.sample(obs, action)
-                # finish check
+                    frame_ct += 1
+
+                # -------------------- finish check ------------------------- #
                 if self.finish_check(obs, self.goal):
                     print('Task finished with {} steps'.format(step))
                     done = True
                     break
-                # control command
+                # ------------------- control command ----------------------- #
                 control = self.listener.get_control()
                 if control == 'exit':
                     print('Task unfinished mannually')
                     break
                 elif control == 'sample_switch':
                     child_control = not child_control
+                    if self.sample_on and self.spusr_only:
+                        if not child_control: # switch to usr
+                            self.sampler = CraftSampler(self.cfg['output_dir'], 
+                                image_h_w=self.image_size, goal=self.goal, 
+                                get_video=self.get_video)
+                            self.sampler.sample(obs, action)
+                            frame_ct = 1
+                        else:  # switch to child
+                            assert self.sampler != None
+                            self.sampler.save_data(done)
+                            self.sampler, frame_ct = None, 0
                     print('switch sampler to {}'.format('child' if child_control
                                                         else 'user'))
                 elif control == 'masks':
                     self.print_action_mask(obs)
                 elif control != None:
                     print(obs[control])
-                # max steps setting
-                if self.sample_on == True and step >= self.horizon:
-                    print('Task unfinished. Max steps {} have cost'.format(self.horizon))
-                    break
+                # --------------- max steps setting ------------------------- #
+                if self.sampler and frame_ct >= MAX_FRAMES:
+                    ''' save data and reset sampler '''
+                    self.sampler.save_data(done)
+                    frame_ct = 0
+                    self.sampler = CraftSampler(self.cfg['output_dir'], 
+                                image_h_w=self.image_size, goal=self.goal, 
+                                get_video=self.get_video)
                 time.sleep(0.05*self.valve)  # 20fps
             except Exception as e:
                 print('Save sampled data before Error')
-                if self.sample_on:
+                if self.sampler:
                     self.sampler.save_data(done)
-                    self.sampler.close_lmdb()
                 self._send_message('finished', None)
                 self.pipe.close()
                 raise e
         self.env.close()
-        if self.sample_on:
+        if self.sampler:
             self.sampler.save_data(done)
-            self.sampler.close_lmdb()
         self._send_message('finished', None)
         self.pipe.close()
 
@@ -84,35 +119,12 @@ class EnvWorker(mp.Process):
     def _recv_message(self):
         self.pipe.poll(None) # wait until new message is received
         command, args = self.pipe.recv()
-
         return command, args
     
-    def init_state(self):
-        image_size = (480, 640)
-        max_steps = {
-            'log': 500,
-            'sheep': 1000,
-            'cow': 1000,
-            'pig': 1000,
-        }
-        self.horizon = max_steps[self.goal] * 2
-        self.get_env(image_size, self.goal)  # set self.env
-        # get view mid, since it differs in different settings
-        view_mid = self.env.action_space.no_op()[3]
-        self.valve = 2  # sensitivy of mouse, increase when fps down
-        self.listener = KeyMouseListener(view_mid, self.valve)
-        self.listener.start()
-        if self.sample_on:
-            self.sampler = CraftSampler(self.cfg['output_dir'], image_h_w=image_size, 
-                                        goal=self.goal)
-
-        print('Start sample with goal: {}, max step: {}, act mid: {}'\
-            .format(self.goal, self.horizon, view_mid))
-    
-    def get_env(self, image_size, goal='log'):
+    def get_env(self):
         self.env = minedojo.make(
             task_id = "harvest",
-            image_size = image_size,
+            image_size = self.image_size,
             initial_mob_spawn_range_low = (-30, 1, -30),
             initial_mob_spawn_range_high = (30, 3, 30),
             initial_mobs = ["sheep", "cow", "pig", "chicken"] * 4,
@@ -126,7 +138,7 @@ class EnvWorker(mp.Process):
             no_daylight_cycle = True,
             specified_biome = "plains",
             # generate_world_type = "flat",
-            max_nsteps = 1000,
+            # max_nsteps = 1000,
             need_all_success = False,
             voxel_size = dict(xmin=-1,ymin=0,zmin=1,xmax=1,ymax=1,zmax=2),
             use_voxel = True,
@@ -135,14 +147,6 @@ class EnvWorker(mp.Process):
         )
     
     def print_action_mask(self, obs):
-        # all type is array bool
-        # print('# action type # ', obs["masks"]["action_type"])   # shape: [8]
-        # print('# action arg # ', obs["masks"]["action_arg"])   # shape: [8]
-        # print('# place # ', obs["masks"]["place"])   # shape: [36]
-        # print('# equip # ', obs["masks"]["equip"])   # shape: [36]
-        # print('# destroy # ', obs["masks"]["destroy"])   # shape: [36]
-        # print('# craft # ', obs["masks"]["craft_smelt"])  # shape: [244] type: bool
-        # print('# masks # ', obs["masks"])
         craft_available = []
         for i, item in enumerate(obs["masks"]["craft_smelt"]):
             if item:
@@ -161,6 +165,8 @@ class EnvWorker(mp.Process):
             'pig': 'porkchop',
             'chicken': 'chicken',
         }
+        if not goal_target_map.__contains__(goal):
+            return False
         if goal_target_map[goal] in obs['inventory']['name']:
             return True
         return False

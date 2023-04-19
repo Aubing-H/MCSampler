@@ -56,7 +56,9 @@ record:
 simulator:
   resolution: [640, 480]
 
+get_video: True
+sample_usr_only: True
 cur_goal: log
 device: 3
-sample_on: False
+sample_on: True
 output_dir: ${hydra:runtime.cwd}/output
