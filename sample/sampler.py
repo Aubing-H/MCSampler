@@ -66,6 +66,6 @@ class CraftSampler:
         with open(self.pkl_path, 'wb') as fw:
             fw.write(pickle.dumps(self.traj_meta))
         print('Traj saved, name: {}, total: {}'.format(self.name, 
-                                                self.traj_meta['horizon']))
+                                                len(self.traj_meta['action'])))
     
 
