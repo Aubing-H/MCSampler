@@ -46,7 +46,7 @@ def update_lmdb():
     source_env.close()
     target_env.close()
 
-
+''' check lmdb data '''
 def test_readlmdb():
     lmdb_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MC-Controller/dataset/'\
         'findlog7traj0412aq'
@@ -98,10 +98,77 @@ def test_readlmdb():
     print('lmdb len: {}'.format(ct))
     env.close()
 
+def data_lmdb2pickle():
+    lmdb_dir = '/home/vcis11/userlist/houjinbing/datasets/minecraft/handcraft/handmadeenv0410aq'
+    pickle_dir = '/home/vcis11/userlist/houjinbing/datasets/minecraft/handcraft/pickle'
+
+    env  = lmdb.open(lmdb_dir + '/lmdb-test')
+    txn = env.begin(write=True)
+
+    for key, value in txn.cursor():
+        data_name = key.decode()
+        traj_data = pickle.loads(value)
+        video_path = os.path.join(lmdb_dir, 'video-sample', data_name+'.mp4')
+        holder = VideoHolder(video_path)
+        traj_data['rgb'] = []
+        for frame in holder.read_frame():
+            sml_f = cv2.resize(frame, (128, 128), interpolation=cv2.INTER_LINEAR)
+            sml = sml_f.transpose(2, 0, 1)[::-1]  # [H, W, BGR] -> [RGB, H, W]
+            traj_data['rgb'].append(sml)
+        len_traj = len(traj_data['action'])
+        assert len(traj_data['rgb']) == len_traj
+        traj_data['rgb'] = np.stack(traj_data['rgb'])
+
+        # split to at most 128 frames, at least 10 frames
+        traj_item = {}
+        for i in range(0, len_traj, 128):
+            if len_traj - i < 10:
+                break
+            end = min(len_traj, i + 128)
+
+            for k, v in traj_data.items():
+                if k in 'rgb, voxels, compass, gps, action, biome, action_quality'\
+                    .split(', '):
+                    traj_item[k] = v[i:end]
+                    if k == 'voxels' and v.shape[1:] != (3, 2, 2):
+                        # [3, 3, 3] -> [3, 2, 2]
+                        traj_item[k] = v[i:end,:,1:,1:]
+                elif k in 'goal, horizon, done'.split(', '):
+                    traj_item[k] = traj_data[k]
+                    if k == 'done' and i + 128 < len_traj:
+                        traj_item[k] = np.array([False])
+                else:
+                    print('Undeal item: ', k)
+
+            name = f'{data_name}_{i//128}.pkl'
+            with open(os.path.join(pickle_dir, name), 'wb') as pf:
+                pf.write(pickle.dumps(traj_item))
+            traj_item = {}
+
+
+def rename_goal_pickle():
+    pkl_dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MCSampler/output/goal-sheep'
+    pkl_dir = pkl_dir + '/data-pkl'
+    for name in os.listdir(pkl_dir):
+        pkl_path = os.path.join(pkl_dir, name)
+        traj_data = None
+        with open(pkl_path, 'rb') as pf:
+            traj_data = pickle.loads(pf.read())
+            if traj_data['goal'][0] != 'sheep':
+                print('file {} rename: {} -> sheep'.format(name, traj_data['goal'][0]))
+                traj_data['goal'] = np.array(['sheep'])
+        if traj_data != None:
+            with open(pkl_path, 'wb') as pf:
+                pf.write(pickle.dumps(traj_data))
+        print('file {} updated'.format(name))
+
 
 def check_pickle():
-    pkl_path = '/home/vcis11/userlist/houjinbing/Documents/minecraft/'\
-        'MCSampler/output/samplev2_1/data-pkl/2ixjwyev84.pkl'
+    dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/'\
+        'MCSampler/output/goal-sheep/data-pkl'
+    dir = '/home/vcis11/userlist/houjinbing/datasets/minecraft/handcraft/pickle'
+    
+    pkl_path = os.path.join(dir, random.choice(os.listdir(dir)))
     # pkl_path = '/home/vcis11/userlist/houjinbing/datasets/minecraft/findcave-'\
     #     'with-action/hazy-thistle-chipmunk-f153ac423f61-20220712-043859_24.pkl'
     with open(pkl_path, 'rb') as pklf:
@@ -115,8 +182,7 @@ def check_pickle():
             else:
                 print(k, len(v))
 
-    dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/'\
-        'MCSampler/output/samplev2_1/data-pkl'
+    
     # dir = '/home/vcis11/userlist/houjinbing/datasets/minecraft/findcave-'\
     #     'with-action'
     for file in os.listdir(dir):

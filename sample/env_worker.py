@@ -30,6 +30,7 @@ class EnvWorker(mp.Process):
         view_mid = self.env.action_space.no_op()[3]
         self.listener = KeyMouseListener(view_mid, self.valve)
         self.listener.start()
+        self.valve = 0
         if self.sample_on and not self.spusr_only:
             self.sampler = CraftSampler(self.cfg['output_dir'], 
                 image_h_w=self.image_size, goal=self.goal, get_video=self.get_video)
@@ -82,10 +83,12 @@ class EnvWorker(mp.Process):
                                 get_video=self.get_video)
                             self.sampler.sample(obs, action)
                             frame_ct = 1
+                            self.valve = 2
                         else:  # switch to child
                             assert self.sampler != None
                             self.sampler.save_data(done)
                             self.sampler, frame_ct = None, 0
+                            self.valve = 0
                     print('switch sampler to {}'.format('child' if child_control
                                                         else 'user'))
                 elif control == 'masks':
