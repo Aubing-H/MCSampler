@@ -100,7 +100,10 @@ def test_readlmdb():
 
 
 def check_pickle():
-    pkl_path = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MCSampler/output/smaplev2_1/data-pkl/cwia9nlg5v.pkl'
+    pkl_path = '/home/vcis11/userlist/houjinbing/Documents/minecraft/'\
+        'MCSampler/output/samplev2_1/data-pkl/2ixjwyev84.pkl'
+    # pkl_path = '/home/vcis11/userlist/houjinbing/datasets/minecraft/findcave-'\
+    #     'with-action/hazy-thistle-chipmunk-f153ac423f61-20220712-043859_24.pkl'
     with open(pkl_path, 'rb') as pklf:
         pkl_data = pklf.read()
         traj_data = pickle.loads(pkl_data)
@@ -111,6 +114,24 @@ def check_pickle():
                 print(k, v)
             else:
                 print(k, len(v))
+
+    dir = '/home/vcis11/userlist/houjinbing/Documents/minecraft/'\
+        'MCSampler/output/samplev2_1/data-pkl'
+    # dir = '/home/vcis11/userlist/houjinbing/datasets/minecraft/findcave-'\
+    #     'with-action'
+    for file in os.listdir(dir):
+        pkl_path = os.path.join(dir, file)
+        with open(pkl_path, 'rb') as pf:
+            traj_data = pickle.loads(pf.read())
+            actions = traj_data['action']
+            ok = (actions < np.array([[3, 3, 4, 11, 11, 8, 1, 1]])).all()
+            if not ok:
+                print('Not ok: ', file)
+                for action in actions:
+                    tf = action < np.array([3, 3, 4, 11, 11, 8, 1, 1])
+                    if not tf.all():
+                        print('org', action)
+                        print('cur', action * tf)
 
 def gather_data():
     ''' when set path error and it write videos and lmdb in each sub dirs 
