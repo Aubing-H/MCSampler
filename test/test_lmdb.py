@@ -99,6 +99,19 @@ def test_readlmdb():
     env.close()
 
 
+def check_pickle():
+    pkl_path = '/home/vcis11/userlist/houjinbing/Documents/minecraft/MCSampler/output/smaplev2_1/data-pkl/cwia9nlg5v.pkl'
+    with open(pkl_path, 'rb') as pklf:
+        pkl_data = pklf.read()
+        traj_data = pickle.loads(pkl_data)
+        for k, v in traj_data.items():
+            if k in 'rgb, voxels, compass, gps, action, biome, action_quality'.split(', '):
+                print(k, v.shape, v.dtype)
+            elif k in 'goal, horizon, done'.split(', '):
+                print(k, v)
+            else:
+                print(k, len(v))
+
 def gather_data():
     ''' when set path error and it write videos and lmdb in each sub dirs 
         It is also useful for merge datasets '''

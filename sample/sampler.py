@@ -46,7 +46,7 @@ class CraftSampler:
 
         img = obs['rgb'].transpose(1, 2, 0)   # [RGB, H, W] -> [H, W, RGB]
         img_cps = cv2.resize(img, (128, 128), interpolation=cv2.INTER_LINEAR)
-        self.traj_meta['rgb'].append(img_cps)
+        self.traj_meta['rgb'].append(img_cps.transpose(2, 0, 1))  # [HWC->CHW]
         
         if self.holder != None: # [H, W, RGB] -> [H, W, BGR]
             self.holder.write_frame(img[...,::-1])

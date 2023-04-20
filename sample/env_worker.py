@@ -17,6 +17,7 @@ class EnvWorker(mp.Process):
         self.goal = cfg['cur_goal']
         self.sample_on = cfg['sample_on']
         self.spusr_only = cfg['sample_usr_only']
+        self.finish_check_on = False
         self.image_size = (480, 640)
         self.sampler = None
         self.get_video = cfg['get_video']
@@ -154,6 +155,8 @@ class EnvWorker(mp.Process):
         print('Craft available:', craft_available)
 
     def finish_check(self, obs, goal):
+        if not self.finish_check_on:
+            return False
         if goal == 'log':
             for name in ['log', 'log2']:
                 if name in obs['inventory']['name']:
