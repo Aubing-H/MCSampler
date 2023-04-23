@@ -30,7 +30,7 @@ class EnvWorker(mp.Process):
         view_mid = self.env.action_space.no_op()[3]
         self.listener = KeyMouseListener(view_mid, self.valve)
         self.listener.start()
-        self.valve = 0
+        self.valve = 0.5
         if self.sample_on and not self.spusr_only:
             self.sampler = CraftSampler(self.cfg['output_dir'], 
                 image_h_w=self.image_size, goal=self.goal, get_video=self.get_video)

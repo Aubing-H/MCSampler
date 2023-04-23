@@ -1,11 +1,13 @@
 base_dir=/home/vcis11/userlist/houjinbing/Documents/minecraft
+controller=$base_dir/MC-Controller/models/weights/controller.pt
 ckpt_9=$base_dir/MC-Controller/outputs/2023-04-19/17-13-07/ckpts/ckpt_9.pt
 ckpt_18=$base_dir/MC-Controller/outputs/2023-04-20/10-26-45/ckpts/ckpt_18.pt
+ckpt_26=$base_dir/MC-Controller/outputs/2023-04-20/23-27-35/ckpts/ckpt_26.pt
 goal=cow
 python run.py cur_goal=$goal\
  device=2\
  sample_on=True\
  sample_usr_only=True\
- model.load_ckpt_path=$ckpt_18\
+ model.load_ckpt_path=$ckpt_26\
  output_dir=$base_dir/MCSampler/output/goal-$goal\
  get_video=True

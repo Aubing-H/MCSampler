@@ -2,6 +2,7 @@ train_data:
   - ${hydra:runtime.cwd}/dataset/plains_lmdb
 
 filters: 
+  - findcave
   - log
   - sheep
   - cow

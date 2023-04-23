@@ -1,6 +1,7 @@
 import sys
 import hydra
 import pathlib
+import os
 
 from sample.main import harvest
 
@@ -30,7 +31,12 @@ TEST = {
 @hydra.main(config_path="configs", config_name="defaults")
 def main(cfg):
     ''' attention: the working path is changed '''
-    print('## main path: ', pathlib.Path.cwd())
+    cur_dir = pathlib.Path.cwd()
+    print('## main path: ', cur_dir)
+    os.system('ln -s {} {}'.format(
+        '/home/vcis11/userlist/houjinbing/Documents/minecraft/MCSampler/openai',
+        os.path.join(cur_dir, 'openai')
+    ))
     # gather_data()
     harvest(cfg)
     # test_child_model(cfg)
@@ -38,4 +44,4 @@ def main(cfg):
 
 if __name__ == '__main__':
     main()
-    # TEST['check_videos']()
+    # TEST['minedojo']()
